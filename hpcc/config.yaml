@@ -3,5 +3,9 @@ cluster-status: "pbs-status.py"
 jobscript: "pbs-jobscript.sh"
 jobs: 5000
 immediate-submit: False
-verbose: true
-notemp: true
+verbose: True
+notemp: True
+rerun-incomplete: True
+keep-going: True
+latency-wait: 10
+max-jobs-per-second: 1
