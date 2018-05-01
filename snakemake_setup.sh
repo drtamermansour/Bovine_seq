@@ -14,7 +14,7 @@ conda config --add channels r
 conda config --add channels defaults
 conda config --add channels conda-forge
 conda config --add channels bioconda
-conda create -n snakemake python==3.6 snakemake=4.3.0
+conda create -n snakemake python==3.6 snakemake==4.8.1
 
 
 ## Deploy pbs-torque profile  ## https://github.com/Snakemake-Profiles/pbs-torque
@@ -29,23 +29,12 @@ cd $work_dir
 cookiecutter https://github.com/Snakemake-Profiles/pbs-torque.git ## use "hpcc" for profile_name
 cd hpcc
 ## update the jobscript
-sed -i '3i source ~/miniconda3/bin/activate snakemake \
-export PATH=$HOME/miniconda3/bin:$PATH' pbs-jobscript.sh
+sed -i '3i export PATH=$HOME/miniconda3/bin:$PATH \
+source activate snakemake' pbs-jobscript.sh
 ## create bash script to run your project
 echo -e '
-logdir=hpcc/log
-mkdir -p $logdir \n
-QSUB="qsub -l nodes=1:ppn={threads} "
-QSUB="$QSUB -o $logdir -e $logdir -A ged" \n
 snakemake                               \
-    -j 100                              \
-    --profile ./hpcc                    \
-    --rerun-incomplete                  \
-    --keep-going                        \
-    --latency-wait 10                   \
-    --max-jobs-per-second 1             \
     --use-conda                         \
-    --cluster "$QSUB" $@' > submit.sh
+    --profile ./hpcc' > submit.sh
 
 cd ../ && chmod u+x hpcc/*
-
