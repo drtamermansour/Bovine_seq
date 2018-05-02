@@ -35,11 +35,12 @@ rule fastqc:
     input:
         "data/fastq/{sample}.fastq.gz"
     output:
+        dir="qc",
         html="qc/{sample}_fastqc.html",
         zip="qc/{sample}_fastqc.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 15,
-        mem = 2000000000
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     threads:1
     shell:
         '''
@@ -49,13 +50,13 @@ rule fastqc:
 
 rule multiQC:
     input:
-        "qc"
+        dir="qc",
     output:
         "multiqc/multiqc_report.html",
         "multiqc/multiqc_data.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 15,
-        mem = 1000000
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     shell:
-        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o multiqc {input}" 
+        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o multiqc {input.dir}" 
 

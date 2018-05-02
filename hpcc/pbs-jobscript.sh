@@ -1,5 +1,5 @@
 #!/bin/sh
 # properties = {properties}
-source ~/miniconda3/bin/activate snakemake 
-export PATH=$HOME/miniconda3/bin:$PATH
+export PATH=$HOME/miniconda3/bin:$PATH 
+source activate snakemake
 {exec_job}
