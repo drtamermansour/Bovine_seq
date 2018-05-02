@@ -9,9 +9,7 @@ rm -r hpcc
 mv /path/to/your/data . 
 ```
 
-## Install conda, create environment with Snakemake, 
-## deploy PBS profile and create a submission bash script
-
+## Install Snakemake using conda & deploy PBS profile
 ```
 bash snakemake_setup.sh 
 ```
