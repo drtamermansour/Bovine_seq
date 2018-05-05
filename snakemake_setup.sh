@@ -35,7 +35,8 @@ sed -i 's/true/True/' config.yaml
 echo -e 'rerun-incomplete: True
 keep-going: True
 latency-wait: 10
-max-jobs-per-second: 1' >> config.yaml
+max-jobs-per-second: 1
+restart-times: 3' >> config.yaml
 ## create bash script to run your project
 echo -e '
 snakemake                               \

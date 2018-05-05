@@ -9,3 +9,4 @@ rerun-incomplete: True
 keep-going: True
 latency-wait: 10
 max-jobs-per-second: 1
+restart-times: 1
