@@ -1,37 +1,64 @@
 #from os import path
 import glob
 
-#Logan = 'AVEAY010B'.split()
-#Buri = 'AVEAY001A'.split()
-#Buri_calf  = 'AVEAY001B AVEAY002A AVEAY002B AVEAY003A AVEAY003B AVEAY004A'.split()
-#Buri_calf_dam = 'AVEAY004B AVEAY005A AVEAY005B AVEAY006A AVEAY006B AVEAY007A'.split()
-#HH_calf = 'AVEAY007B AVEAY008A AVEAY008B'.split()
-#HH_calf_dam = 'AVEAY009A AVEAY009B AVEAY010A'.split()
-#SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam
+Logan = 'AVEAY0010B'.split()
+Buri = 'AVEAY001A'.split()
+Buri_calf  = 'AVEAY001B AVEAY002A AVEAY002B AVEAY003A AVEAY003B AVEAY004A'.split()
+Buri_calf_dam = 'AVEAY004B AVEAY005A AVEAY005B AVEAY006A AVEAY006B AVEAY007A'.split()
+HH_calf = 'AVEAY007B AVEAY008A AVEAY008B'.split()
+HH_calf_dam = 'AVEAY009A AVEAY009B AVEAY0010A'.split()
+HH_calf_sire = 'AVEAY011A AVEAY011B'.split()
+Logan_calf = 'AVEAY012A AVEAY012B'.split()
+Logan_calf_dam = 'AVEAY013A AVEAY013B'.split()
+
+SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam
+ID = ['1', '2', '3', '4', '5']
+old_samples = 0
+scale = 8
+
+#SAMPLES = HH_calf_sire + Logan_calf + Logan_calf_dam
+#ID = ['6', '7']
+#old_samples = 5
+#scale = 6
+
+#SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam + HH_calf_sire + Logan_calf + Logan_calf_dam
+#ID = ['1', '2', '3', '4', '5', '6', '7']
 
 fastq_pattern = "data/fastq/*/*_001.fastq.gz"
 fastq_files = glob.glob(fastq_pattern)
-sample_ids = [fq[11:-9] for fq in fastq_files]
-fragment_ids = [fq[11:-16] for fq in fastq_files]
+read_ids = [fq[11:-9] for fq in fastq_files]
+fragment_ids = list(set([fq[11:-16] for fq in fastq_files]))
 
 rule all:
     input:
-#        expand('output/{sample}.txt', sample=SAMPLES)#, R=['R1', 'R2'])
-        expand("qc/fastq/{sample}_fastqc.html", sample=sample_ids), expand("qc/fastq/{sample}_fastqc.zip", sample=sample_ids),
-        "multiqc/fastq/multiqc_report.html",
-        expand('data/trimmed/{fragment}_R1_001.fastq.gz', fragment=fragment_ids), expand('data/trimmed/{fragment}_R2_001.fastq.gz', fragment=fragment_ids),
-        expand("qc/trimmed/{sample}_fastqc.html", sample=sample_ids), expand("qc/trimmed/{sample}_fastqc.zip", sample=sample_ids),
-        "multiqc/trimmed/multiqc_report.html",
+        expand("qc/fastqc/fastq/{read}_fastqc.{ext}", read=read_ids, ext=['html', 'zip']),
+        "qc/multiqc/fastq/multiqc_report.html",
+        expand('data/trimmed/{fragment}_{R}_001.fastq.gz', fragment=fragment_ids, R=['R1', 'R2']),
+        expand("qc/fastqc/trimmed/{read}_fastqc.{ext}", read=read_ids, ext=['html', 'zip']),
+        "qc/multiqc/trimmed/multiqc_report.html",
         "refGenome/ARS-UCD1.2_chr.fa",
         expand("refGenome/BwaIndex/genome.{ext}", ext=['amb', 'ann', 'bwt', 'pac', 'sa']),
+        #expand("{fragment}.test.txt", fragment=fragment_ids),
         expand("data/mapped_reads/{fragment}.bam", fragment=fragment_ids),
+        expand("data/sorted_reads/{fragment}.bam", fragment=fragment_ids),
+        expand("data/merged_reps/{sample}.bam", sample=SAMPLES),
+        expand("qc/mappingQC/{sample}.cov", sample=SAMPLES), expand("qc/mappingQC/{sample}.stat", sample=SAMPLES),
+        expand("data/dedup/{sample}.bam", sample=SAMPLES), expand("data/dedup/{sample}.txt", sample=SAMPLES),
+        #expand("data/merged_reps/{sample}.bai", sample=SAMPLES),
+        expand("data/dedup/{sample}.bai", sample=SAMPLES),
+        "refGenome/gatkIndex/genome.fa.fai", "refGenome/gatkIndex/genome.dict",
+        expand("vc/hapCaller_single/{sample}.g.vcf", sample=SAMPLES),
+        expand("vc/combineGVCF/combined_patch_{id}.vcf", id=ID),
+#        "vc/hapCaller_raw.vcf",
+#        "vc/hapCaller_raw_withExternal.vcf",
+##        expand("targetReads_grep/singleFiles/{read}_target_reads.fa", read=read_ids),
 
 rule fastqc_pre:
     input:
-        "data/fastq/{sample}.fastq.gz"
+        "data/fastq/{read}.fastq.gz"
     output:
-        html="qc/fastq/{sample}_fastqc.html",
-        zip="qc/fastq/{sample}_fastqc.zip"
+        html="qc/fastqc/fastq/{read}_fastqc.html",
+        zip="qc/fastqc/fastq/{read}_fastqc.zip"
     resources:
         walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
@@ -39,20 +66,20 @@ rule fastqc_pre:
     shell:
         '''
         module load FastQC/0.11.5
-        fastqc -t {threads} -f fastq -noextract -o qc/fastq/$(dirname {wildcards.sample}) {input}
+        fastqc -t {threads} -f fastq -noextract -o qc/fastqc/fastq/$(dirname {wildcards.read}) {input}
         '''
 
 rule multiQC_pre:
     input:
-        html=expand("qc/fastq/{sample}_fastqc.html", sample=sample_ids)
+        html=expand("qc/fastqc/fastq/{read}_fastqc.html", read=read_ids)
     output:
-        "multiqc/fastq/multiqc_report.html",
-        "multiqc/fastq/multiqc_data.zip"
+        "qc/multiqc/fastq/multiqc_report.html",
+        "qc/multiqc/fastq/multiqc_data.zip"
     resources:
         walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     shell:
-        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o multiqc/fastq qc/fastq" 
+        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o qc/multiqc/fastq qc/fastqc/fastq" 
 
 rule trimmomatic_pe:
     input:
@@ -71,7 +98,7 @@ rule trimmomatic_pe:
 #        # optional parameters
 #        extra=""
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 4
     threads:2
     shell:
@@ -82,10 +109,10 @@ rule trimmomatic_pe:
 
 rule fastqc_post:
     input:
-        "data/trimmed/{sample}.fastq.gz"
+        "data/trimmed/{read}.fastq.gz"
     output:
-        html="qc/trimmed/{sample}_fastqc.html",
-        zip="qc/trimmed/{sample}_fastqc.zip"
+        html="qc/fastqc/trimmed/{read}_fastqc.html",
+        zip="qc/fastqc/trimmed/{read}_fastqc.zip"
     resources:
         walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
@@ -93,20 +120,20 @@ rule fastqc_post:
     shell:
         '''
         module load FastQC/0.11.5
-        fastqc -t {threads} -f fastq -noextract -o qc/trimmed/$(dirname {wildcards.sample}) {input}
+        fastqc -t {threads} -f fastq -noextract -o qc/fastqc/trimmed/$(dirname {wildcards.read}) {input}
         '''
 
 rule multiQC_post:
     input:
-        html=expand("qc/trimmed/{sample}_fastqc.html", sample=sample_ids)
+        html=expand("qc/fastqc/trimmed/{read}_fastqc.html", read=read_ids)
     output:
-        "multiqc/trimmed/multiqc_report.html",
-        "multiqc/trimmed/multiqc_data.zip"
+        "qc/multiqc/trimmed/multiqc_report.html",
+        "qc/multiqc/trimmed/multiqc_data.zip"
     resources:
         walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     shell:
-        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o multiqc/trimmed qc/trimmed"
+        "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o qc/multiqc/trimmed qc/fastqc/trimmed"
 
 rule download_ref:
     output:
@@ -143,32 +170,312 @@ rule bwa_map:
         r1="data/trimmed/{fragment}_R1_001.fastq.gz",
         r2="data/trimmed/{fragment}_R2_001.fastq.gz",
     output:
-#        "{fragment}.test.txt"
-        "data/mapped_reads/{fragment}.bam",
+        #"{fragment}.test.txt"
+        "data/mapped_reads/{fragment}.bam",   ## Actually the output is sam file
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 16,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 16
     threads:4
     shell:
         '''
         name=$(basename {input.r1})
         SM=$(echo $name | cut -d "_" -f1)
-        repLib="1"
-        if [ -f "data/replicates_list.tab" ];then
-            repLib=$(grep $SM $replicates_list | awk '{{ print $2 }}');fi
-        LB=$SM.$repLib
+        LB=$(echo $name | cut -d"_" -f1,2)  ## We use <Index.Sequence> in the Illumina file name as an index to the library
+        batch=$(basename "$(dirname {input.r1})")
+        if [ "$batch" != "trimmed" ];then LB=$batch.$LB;fi
+        #repLib="1"
+        #if [ -f "data/replicates_list.tab" ];then
+        #    repLib=$(grep $SM $replicates_list | awk '{{ print $2 }}');fi
+        #LB=$SM.$repLib  ## This way we use metadeta file to track library info. e.g. you have multiple libraries with the same index
         PL="Illumina"
-        ##read Fastq 1st read, check the format.If typical, identify ID as "<instrument>:<run number>:<flowcell ID>:<lane>", and PU as the "<instrument>"
+        ##read Fastq 1st read, check the format.If typical, identify ID as "<instrument>:<run number>:<flowcell ID>:<lane>"
         header=$(head -n1 <(zcat {input.r1}) | grep ':*:*:*:*:*:*')
+        #if [ "$header" != "" ]; then
+        #    PU=$(echo "$header" | sed 's/:/_/g' |cut -d "_" -f1,2,3,4)       
+        #else # "make unique ID and PU using checksum"
+        #    checksum=$(shasum $sample | awk '{{ print $1 }}')
+        #    PU="UnChrPU_"$checksum
+        #fi
+        #RGID=$PU.$SM
         if [ "$header" != "" ]; then
-            PU=$(echo "$header" | sed 's/:/_/g' |cut -d "_" -f1,2,3,4)            ##platform unit-lane ID
+            RGID=$(echo "$header" | sed 's/:/_/g' |cut -d "_" -f1,2,3,4)     
         else # "make unique ID and PU using checksum"
-            checksum=$(shasum $sample | awk '{{ print $1 }}')
-            PU="UnChrPU_"$checksum
+            checksum=$(shasum {input.r1} | awk '{{ print $1 }}')
+            RGID="UnChrPU_"$checksum
         fi
-        RGID=$PU.$SM
+        PU=$RGID.$LB  
+        #echo RGID $RGID LB $LB PL $PL PU $PU SM $SM > {output}
         echo RGID $RGID LB $LB PL $PL PU $PU SM $SM >> test.txt
 
         module load bwa/0.7.7.r441
         bwa mem -t {threads} -M -R "@RG\tID:$RGID\tSM:$SM\tPL:$PL\tLB:$LB\tPU:$PU" refGenome/BwaIndex/genome {input.r1} {input.r2} > {output}
         '''
+
+rule samtools_sort:
+    input:
+        "data/mapped_reads/{fragment}.bam",
+    output:
+        "data/sorted_reads/{fragment}.bam",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 16
+    threads:4
+    shell:
+        '''
+        rm -f data/sorted_reads/{wildcards.fragment}*
+        module load SAMTools/1.5
+        samtools sort -T data/sorted_reads/{wildcards.fragment} -m 2G -@ {threads} -O bam {input} > {output}
+        '''
+
+# There is a problem with bwa which add the mapping command to the @PG line. Their current implementation translate \t into real tabs ending up with 2 ID keys in one @PG line
+# https://github.com/samtools/htsjdk/issues/677 
+# https://github.com/samtools/hts-specs/issues/275
+# https://github.com/broadinstitute/picard/issues/1139
+# To work around this problem, I use "VALIDATION_STRINGENCY=LENIENT" in picardTools commands
+rule merge_rep:
+    input:
+        expand("data/sorted_reads/{fragment}.bam", fragment=fragment_ids),
+    output:
+        "data/merged_reps/{sample}.bam",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 8
+    shell:
+        '''
+        inputs_bam=()
+        while read bam;do
+            input_bam=$"INPUT="$bam;
+            inputs_bam+=($input_bam);
+        done < <(find data/sorted_reads -name "{wildcards.sample}_*")
+        if [ ${{#inputs_bam[@]}} -eq 1 ];then
+            singleSample=${{inputs_bam[0]#INPUT=}}
+            ln -s $(pwd)/$singleSample {output}
+        else
+            module load picardTools/1.89
+            java -Xmx8g -jar $PICARD/MergeSamFiles.jar VALIDATION_STRINGENCY=LENIENT ASSUME_SORTED=true ${{inputs_bam[*]}} OUTPUT={output}
+        fi
+        '''
+#    shell:
+#        '''
+#        module load picardTools/1.89
+#        inputs_bam=()
+#        while read bam;do
+#            input_bam=$"INPUT="$bam;
+#            inputs_bam+=($input_bam);
+#        done < <(find data/sorted_reads -name "{wildcards.sample}_*")
+#        java -Xmx8g -jar $PICARD/MergeSamFiles.jar VALIDATION_STRINGENCY=LENIENT ASSUME_SORTED=true ${{inputs_bam[*]}} OUTPUT={output}
+#        '''
+
+rule mappingQC:
+    input:
+        "data/merged_reps/{sample}.bam",
+    output:
+        cov="qc/mappingQC/{sample}.cov",
+        stat="qc/mappingQC/{sample}.stat",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 8
+    shell:
+        '''
+        module load SAMTools/1.5
+        samtools depth {input} | awk '{{sum+=$3}} END {{print "Average = ",sum/NR}}' > {output.cov}
+        samtools flagstat {input} > {output.stat}
+        '''
+
+rule markDuplicates:
+    input:
+        "data/merged_reps/{sample}.bam",
+    output:
+        bam="data/dedup/{sample}.bam",
+        metrics="data/dedup/{sample}.txt",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 8,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 12
+    shell:
+        '''
+        module load picardTools/1.89
+        java -Xmx8g -jar $PICARD/MarkDuplicates.jar VALIDATION_STRINGENCY=LENIENT ASSUME_SORTED=true INPUT={input} OUTPUT={output.bam} METRICS_FILE={output.metrics}
+        '''
+
+rule buildBamIndex:
+    input:
+        "data/dedup/{sample}.bam",
+#        "data/merged_reps/{sample}.bam",
+    output:
+        "data/dedup/{sample}.bai",
+#        "data/merged_reps/{sample}.bai",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 1,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 8
+    shell:
+        '''
+        module load picardTools/1.89
+        java -Xmx8g -jar $PICARD/BuildBamIndex.jar VALIDATION_STRINGENCY=LENIENT INPUT={input}
+        '''
+
+rule GATK_index:
+    input:
+        "refGenome/ARS-UCD1.2_chr.fa"
+    output:
+        index="refGenome/gatkIndex/genome.fa.fai",
+        dict="refGenome/gatkIndex/genome.dict",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 1,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 8
+    shell:
+        '''
+        if [ ! -f refGenome/gatkIndex/genome.fa ];then ln -s ../ARS-UCD1.2_chr.fa refGenome/gatkIndex/genome.fa;fi
+        module load SAMTools/1.5
+        module load picardTools/1.89
+        samtools faidx "refGenome/gatkIndex/genome.fa"
+        java -Xmx4g -jar $PICARD/CreateSequenceDictionary.jar R= {input} O= {output.dict}
+        '''
+
+rule HaplotypeCaller_single:
+    input:
+        "refGenome/gatkIndex/genome.fa.fai", "refGenome/gatkIndex/genome.dict",
+        ref="refGenome/gatkIndex/genome.fa",
+        bam="data/dedup/{sample}.bam",
+    output:
+        gvcf="vc/hapCaller_single/{sample}.g.vcf", 
+        idx="vc/hapCaller_single/{sample}.g.vcf.idx",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 96,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 64
+    threads:4
+    shell:
+        '''
+        module load GATK/3.7.0
+        java -Xmx28g -jar $GATK/GenomeAnalysisTK.jar \
+        -T HaplotypeCaller \
+        -R {input.ref} \
+        -I {input.bam} \
+        --emitRefConfidence GVCF \
+        -nct 3 \
+        -o {output.gvcf}
+#        --dbsnp $snps \
+#        --variant_index_type LINEAR \
+#        --variant_index_parameter 128000 \
+#        -nct 3 \
+#        -o {output}
+        '''
+
+## if this is not the first batch, select the appropriate SAMPLES
+rule combineGVCFs:
+    input:
+        gvcfs=expand("vc/hapCaller_single/{sample}.g.vcf", sample=SAMPLES),
+        ref="refGenome/gatkIndex/genome.fa",
+    output:
+        "vc/combineGVCF/combined_patch_{id}.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 24 * 3,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 128
+    threads:1
+    shell:
+        '''
+        touch vc/hapCaller_single/*.g.vcf.idx
+        inputs=()
+        #for gvcf in vc/hapCaller_single/*.g.vcf;do
+        for gvcf in {input.gvcfs};do
+            input_gvcf=$" -V "$gvcf;
+            inputs+=($input_gvcf);
+        done
+
+        #start_id=$((({wildcards.id}-1)*8))
+        start_id=$((({wildcards.id}-{old_samples}-1)*{scale}))
+        module load GATK/3.7.0
+        java -Xmx120g -jar $GATK/GenomeAnalysisTK.jar \
+        -T CombineGVCFs \
+        -R {input.ref} \
+        ${{inputs[*]:$start_id:{scale}}} \
+        -o {output}
+#        $(echo $trim_inputs) \
+#        -o {output}
+        '''
+
+## if this is not the first batch, revert to the whole list SAMPLES and run the touch script to avoid re-runs
+rule genotypeGVCFs:
+    input:
+        #expand("vc/hapCaller_single/{sample}.g.vcf", sample=SAMPLES),
+        expand("vc/combineGVCF/combined_patch_{id}.vcf", id=ID),
+        ref="refGenome/gatkIndex/genome.fa",
+    output:
+        "vc/hapCaller_raw.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 24 * 5,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 128
+    threads:1
+    shell:
+        '''
+        #touch vc/hapCaller_single/*.g.vcf.idx
+        touch vc/combineGVCF/*.vcf.idx
+        inputs=()
+        #for gvcf in vc/hapCaller_single/*.g.vcf;do
+        for gvcf in vc/combineGVCF/combined_patch_*.vcf;do
+            input_gvcf=$" -V "$gvcf;
+            inputs+=($input_gvcf);
+        done
+
+        module load GATK/3.7.0
+        java -Xmx120g -jar $GATK/GenomeAnalysisTK.jar \
+        -T GenotypeGVCFs \
+        -R {input.ref} \
+        ${{inputs[*]}} \
+        --max_alternate_alleles 6 \
+        -o {output}
+#        -nt 3 \     								## multithreading cause runtime error
+#        --disable_auto_index_creation_and_locking_when_reading_rods \          ## no need because I am touching the indices 
+#        -o {output}
+#        --dbsnp $snps \
+#        $(echo $samples) \
+        '''
+
+## run the Snakmeke files of external experiments before you proceed
+rule genotypeGVCFs2:
+    input:
+        expand("vc/combineGVCF/combined_patch_{id}.vcf", id=ID),
+        expand("external/SRP072240/vc/combineGVCF/combined_patch_{id}.vcf", id=['1']),
+        ref="refGenome/gatkIndex/genome.fa",
+    output:
+        "vc/hapCaller_raw_withExternal.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 24 * 5,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 128
+    threads:1
+    shell:
+        '''
+        #touch vc/combineGVCF/*.vcf.idx
+        touch external/SRP072240/vc/combineGVCF/*.vcf.idx
+        inputs=()
+        for gvcf in vc/combineGVCF/combined_patch_*.vcf external/SRP072240/vc/combineGVCF/combined_patch_*.vcf;do
+            input_gvcf=$" -V "$gvcf;
+            inputs+=($input_gvcf);
+        done
+
+        module load GATK/3.7.0
+        java -Xmx120g -jar $GATK/GenomeAnalysisTK.jar \
+        -T GenotypeGVCFs \
+        -R {input.ref} \
+        ${{inputs[*]}} \
+        --max_alternate_alleles 6 \
+        -o {output}
+        '''
+
+
+rule findTargetReads:
+    input:
+        seq="data/trimmed/{read}.fastq.gz",
+        bait="targetReads_grep/bait_Allkmers.txt",
+    output:
+        fq="targetReads_grep/singleFiles/read}_target_reads.fq",
+        fa="targetReads_grep/singleFiles/{read}_target_reads.fa",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
+    threads:1
+    shell:
+        '''
+        zgrep -B1 -A2 -F -f {input.bait} {input.seq} | grep -v "^\-\-" > {output.fq} || true
+        cat {output.fq} | paste - - - - | sed 's/^@/>/g'| cut -f1-2 | tr '\t' '\n' > {output.fa}
+        '''
+

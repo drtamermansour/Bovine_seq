@@ -1,9 +1,6 @@
 ############################################################
 ## SnakeMake with conda and generic snakemake profiles
 ######################################################
-
-work_dir=$(pwd)  ## This is the root directory of your project where you have the Snakefile
-
 ## Install Snakemake using miniconda    ## http://snakemake.readthedocs.io/en/stable/getting_started/installation.html
 # install miniconda  ## https://github.com/taylorreiter/olive_genome
 cd ~
@@ -24,19 +21,24 @@ pip install cookiecutter        ## https://cookiecutter.readthedocs.io/en/latest
 # cd ~/.config/snakemake
 # cookiecutter https://github.com/Snakemake-Profiles/pbs-torque.git
 ## This is to make project specific pbs-torque profile
+work_dir=$(pwd)  ## This is the root directory of your project where you have the Snakefile
 cd $work_dir
 cookiecutter https://github.com/Snakemake-Profiles/pbs-torque.git ## use "hpcc" for profile_name
 cd hpcc
 ## update the jobscript
+# loading module in jobscript: https://bitbucket.org/snakemake/snakemake/issues/155/feature-request-integration-with-the
+sed -i 's|#!/bin/sh|#!/bin/bash|' pbs-jobscript.sh
 sed -i '3i export PATH=$HOME/miniconda3/bin:$PATH \
 source activate snakemake' pbs-jobscript.sh
-## update the config file
+## update the config file ## this config file is saved as config_backup.yaml. It will submit the jobs, keep track and resubmit on failure
+## currently I am using the default config (just change the true to True
+sed -i 's/cluster:.*/cluster: "pbs-submit.py "/' config.yaml 
 sed -i 's/true/True/' config.yaml 
 echo -e 'rerun-incomplete: True
 keep-going: True
 latency-wait: 10
 max-jobs-per-second: 1
-restart-times: 3' >> config.yaml
+restart-times: 2' >> config.yaml
 ## create bash script to run your project
 echo -e '
 snakemake                               \

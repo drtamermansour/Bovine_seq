@@ -1,13 +1,12 @@
-cluster: "pbs-submit.py --depend \"{dependencies}\""
+cluster: "pbs-submit.py "
 cluster-status: "pbs-status.py"
 jobscript: "pbs-jobscript.sh"
 jobs: 5000
-immediate-submit: True
+immediate-submit: False
 verbose: True
 notemp: True
 rerun-incomplete: True
 keep-going: True
-latency-wait: 100
+latency-wait: 10
 max-jobs-per-second: 1
-restart-times: 0
-
+restart-times: 1
