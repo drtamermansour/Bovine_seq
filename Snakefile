@@ -11,18 +11,18 @@ HH_calf_sire = 'AVEAY011A AVEAY011B'.split()
 Logan_calf = 'AVEAY012A AVEAY012B'.split()
 Logan_calf_dam = 'AVEAY013A AVEAY013B'.split()
 
-SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam
-ID = ['1', '2', '3', '4', '5']
-old_samples = 0
-scale = 8
+#SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam
+#ID = ['1', '2', '3', '4', '5']
+#old_samples = 0
+#scale = 8
 
 #SAMPLES = HH_calf_sire + Logan_calf + Logan_calf_dam
 #ID = ['6', '7']
 #old_samples = 5
 #scale = 6
 
-#SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam + HH_calf_sire + Logan_calf + Logan_calf_dam
-#ID = ['1', '2', '3', '4', '5', '6', '7']
+SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam + HH_calf_sire + Logan_calf + Logan_calf_dam
+ID = ['1', '2', '3', '4', '5', '6', '7']
 
 fastq_pattern = "data/fastq/*/*_001.fastq.gz"
 fastq_files = glob.glob(fastq_pattern)
@@ -50,7 +50,7 @@ rule all:
         expand("vc/hapCaller_single/{sample}.g.vcf", sample=SAMPLES),
         expand("vc/combineGVCF/combined_patch_{id}.vcf", id=ID),
 #        "vc/hapCaller_raw.vcf",
-#        "vc/hapCaller_raw_withExternal.vcf",
+        "vc/hapCaller_raw_withExternal.vcf",
 ##        expand("targetReads_grep/singleFiles/{read}_target_reads.fa", read=read_ids),
 
 rule fastqc_pre:
