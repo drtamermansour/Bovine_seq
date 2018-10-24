@@ -41,12 +41,12 @@ for f in $data/*/*.fastq.gz;do
 done
 
 ## recognize the ends
-for f in $output/*/*_R1_*.fa;do sed -i 's|^\(>.*\) |\1\\1 |' $f;done 
-for f in $output/*/*_R2_*.fa;do sed -i 's|^\(>.*\) |\1\\2 |' $f;done
+for f in $output/*/*_R1*_*.fa;do sed -i 's|^\(>.*\) |\1\\1 |' $f;done 
+for f in $output/*/*_R2*_*.fa;do sed -i 's|^\(>.*\) |\1\\2 |' $f;done
 
 ## QC: count the target reads
-wc -l targetReads_grep/singleFiles/1*/*.fa | head -n400 | sed -e 's/^[[:space:]]*//' | awk -F'[ /]' '{print $1, $3}' > targetReads_grep/countsA
-wc -l targetReads_grep/singleFiles/1*/*.fa | head -n400 | sed -e 's/^[[:space:]]*//' | awk -F'[ /]' '{print $4}' | awk -F'_' '{print $1,$3,$4}' > targetReads_grep/countsB
+wc -l targetReads_grep/singleFiles/*/*.fa | head -n -1 | sed -e 's/^[[:space:]]*//' | awk -F'[ /]' '{print $1, $4}' > targetReads_grep/countsA
+wc -l targetReads_grep/singleFiles/*/*.fa | head -n -1 | sed -e 's/^[[:space:]]*//' | awk -F'[ /]' '{print $5}' | awk -F'_' '{print $1,$2,$3,$4}' > targetReads_grep/countsB
 paste -d" " targetReads_grep/countsA targetReads_grep/countsB > targetReads_grep/counts.list 
 cat targetReads_grep/counts.list | awk '{A[$3]+=$1}END{for(i in A)print i,A[i]}' > targetReads_grep/count_per_sample.list
 

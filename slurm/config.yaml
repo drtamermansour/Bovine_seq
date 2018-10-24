@@ -1,0 +1,13 @@
+cluster: "slurm-submit.py --depend \"{dependencies}\""
+cluster-status: "slurm-status.py"
+jobscript: "slurm-jobscript.sh"
+jobs: 5000
+immediate-submit: True
+verbose: True
+notemp: True
+rerun-incomplete: True
+keep-going: True
+latency-wait: 100
+max-jobs-per-second: 1
+restart-times: 0
+

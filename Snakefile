@@ -8,8 +8,8 @@ Buri_calf_dam = 'AVEAY004B AVEAY005A AVEAY005B AVEAY006A AVEAY006B AVEAY007A'.sp
 HH_calf = 'AVEAY007B AVEAY008A AVEAY008B'.split()
 HH_calf_dam = 'AVEAY009A AVEAY009B AVEAY0010A'.split()
 HH_calf_sire = 'AVEAY011A AVEAY011B'.split()
-Logan_calf = 'AVEAY012A AVEAY012B'.split()
-Logan_calf_dam = 'AVEAY013A AVEAY013B'.split()
+Logan_calf = 'AVEAY012A AVEAY012B AVEAY14A'.split()
+Logan_calf_dam = 'AVEAY013A AVEAY013B AVEAY14B'.split()
 
 #SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam
 #ID = ['1', '2', '3', '4', '5']
@@ -19,7 +19,7 @@ Logan_calf_dam = 'AVEAY013A AVEAY013B'.split()
 #SAMPLES = HH_calf_sire + Logan_calf + Logan_calf_dam
 #ID = ['6', '7']
 #old_samples = 5
-#scale = 6
+#scale = 8
 
 SAMPLES = Logan + Buri + Buri_calf + Buri_calf_dam + HH_calf + HH_calf_dam + HH_calf_sire + Logan_calf + Logan_calf_dam
 ID = ['1', '2', '3', '4', '5', '6', '7']
@@ -51,7 +51,14 @@ rule all:
         expand("vc/combineGVCF/combined_patch_{id}.vcf", id=ID),
 #        "vc/hapCaller_raw.vcf",
         "vc/hapCaller_raw_withExternal.vcf",
-##        expand("targetReads_grep/singleFiles/{read}_target_reads.fa", read=read_ids),
+        "vc/hapCaller_raw_withExternal.raw_SNPs.vcf",
+        "vc/hapCaller_raw_withExternal.raw_INDELs.vcf",
+        "vc/hapCaller_raw_withExternal.filtered_SNPs.vcf",
+        "vc/hapCaller_raw_withExternal.filtered_INDELs.vcf",
+        expand("vc/hapCaller_raw_withExternal.filtered_{var}s.vcf", var=['SNP','INDEL']),
+        expand("vc/hapCaller_raw_withExternal.pass_{var}s.vcf", var=['SNP','INDEL']),
+        "vc/hapCaller_raw_withExternal.pass_INDELs.monoAllel_edit.vcf",
+        expand("targetReads_grep/singleFiles/{read}_target_reads.fa", read=read_ids),
 
 rule fastqc_pre:
     input:
@@ -60,7 +67,7 @@ rule fastqc_pre:
         html="qc/fastqc/fastq/{read}_fastqc.html",
         zip="qc/fastqc/fastq/{read}_fastqc.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     threads:1
     shell:
@@ -76,7 +83,7 @@ rule multiQC_pre:
         "qc/multiqc/fastq/multiqc_report.html",
         "qc/multiqc/fastq/multiqc_data.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     shell:
         "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o qc/multiqc/fastq qc/fastqc/fastq" 
@@ -98,7 +105,7 @@ rule trimmomatic_pe:
 #        # optional parameters
 #        extra=""
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 8,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 4
     threads:2
     shell:
@@ -114,7 +121,7 @@ rule fastqc_post:
         html="qc/fastqc/trimmed/{read}_fastqc.html",
         zip="qc/fastqc/trimmed/{read}_fastqc.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     threads:1
     shell:
@@ -130,7 +137,7 @@ rule multiQC_post:
         "qc/multiqc/trimmed/multiqc_report.html",
         "qc/multiqc/trimmed/multiqc_data.zip"
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
     shell:
         "/opt/software/multiQC/1.0--singularity/bin/multiqc.img -z -o qc/multiqc/trimmed qc/fastqc/trimmed"
@@ -173,8 +180,8 @@ rule bwa_map:
         #"{fragment}.test.txt"
         "data/mapped_reads/{fragment}.bam",   ## Actually the output is sam file
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 16,
-        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 16
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 24,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 120
     threads:4
     shell:
         '''
@@ -217,8 +224,8 @@ rule samtools_sort:
     output:
         "data/sorted_reads/{fragment}.bam",
     resources:
-        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60,
-        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 16
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 8,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 64
     threads:4
     shell:
         '''
@@ -232,6 +239,13 @@ rule samtools_sort:
 # https://github.com/samtools/hts-specs/issues/275
 # https://github.com/broadinstitute/picard/issues/1139
 # To work around this problem, I use "VALIDATION_STRINGENCY=LENIENT" in picardTools commands
+#
+## shortcut code to avoid schduling jobs for single files
+# cd Bovine_seq
+# for sample in AVEAY011A AVEAY011B AVEAY012A AVEAY012B AVEAY013A AVEAY013B AVEAY14A AVEAY14B;do
+#   ln -s $(pwd)/data/sorted_reads/*/${sample}_*.bam data/merged_reps/${sample}.bam
+# done
+#
 rule merge_rep:
     input:
         expand("data/sorted_reads/{fragment}.bam", fragment=fragment_ids),
@@ -461,13 +475,115 @@ rule genotypeGVCFs2:
         -o {output}
         '''
 
+rule select_snps:
+    input:
+        ref="refGenome/gatkIndex/genome.fa",
+        vcf="vc/hapCaller_raw_withExternal.vcf",
+    output:
+        "vc/hapCaller_raw_withExternal.raw_SNPs.vcf"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 24
+    threads:4
+    shell:
+        '''
+        module load GATK/3.7.0
+        java -Xmx20g -jar $GATK/GenomeAnalysisTK.jar \
+        -T SelectVariants \
+        -R {input.ref} \
+        -V {input.vcf} \
+        -selectType "SNP" \
+        -nt 3 \
+        -o {output}
+        '''
+
+rule select_indels:
+    input:
+        ref="refGenome/gatkIndex/genome.fa",
+        vcf="vc/hapCaller_raw_withExternal.vcf",
+    output:
+        "vc/hapCaller_raw_withExternal.raw_INDELs.vcf"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 24
+    threads:4
+    shell:
+        '''
+        module load GATK/3.7.0
+        java -Xmx20g -jar $GATK/GenomeAnalysisTK.jar \
+        -T SelectVariants \
+        -R {input.ref} \
+        -V {input.vcf} \
+        -selectType "INDEL" \
+        -nt 3 \
+        -o {output}
+        '''
+
+rule filter_variants:
+    input:
+        expand("vc/hapCaller_raw_withExternal.raw_{var}s.vcf", var=['SNP','INDEL']),
+        ref="refGenome/gatkIndex/genome.fa",
+    output:
+        "vc/hapCaller_raw_withExternal.filtered_{var}s.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 2,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 24
+    threads:1
+    shell:
+        '''
+        module load GATK/3.7.0
+        java -Xmx20g -jar $GATK/GenomeAnalysisTK.jar \
+        -T VariantFiltration \
+        -R {input.ref} \
+        -V "vc/hapCaller_raw_withExternal.raw_{wildcards.var}s.vcf" \
+        --filterName "filterQD" --filterExpression "vc.hasAttribute('QD') && QD < 3.0" \
+        --filterName "filterFS" --filterExpression "vc.hasAttribute('FS') && FS > 50.0" \
+        --filterName "filterSOR" --filterExpression "vc.hasAttribute('SOR') && SOR > 3.0" \
+        --filterName "filterMQ" --filterExpression "vc.hasAttribute('MQ') && MQ < 50.0" \
+        --filterName "filterMQRankSum" --filterExpression "vc.hasAttribute('MQRankSum') && MQRankSum < -2.0" \
+        --filterName "filterHiReadPosRankSum" --filterExpression "vc.hasAttribute('ReadPosRankSum') && ReadPosRankSum < -4.0" \
+        --filterName "filterLowReadPosRankSum" --filterExpression "vc.hasAttribute('ReadPosRankSum') && ReadPosRankSum > 5.0" \
+        -o {output}
+        '''
+
+rule apply_filters:
+    input:
+        expand("vc/hapCaller_raw_withExternal.filtered_{var}s.vcf", var=['SNP','INDEL']),
+    output:
+        "vc/hapCaller_raw_withExternal.pass_{var}s.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 24
+    threads:1
+    shell:
+        '''
+        grep -E "^#|PASS" "vc/hapCaller_raw_withExternal.filtered_{wildcards.var}s.vcf" > "vc/hapCaller_raw_withExternal.pass_{wildcards.var}s.vcf"
+        #grep "PASS" "vc/hapCaller_raw_withExternal.raw_{wildcards.var}s.vcf" >> "vc/hapCaller_raw_withExternal.pass_{wildcards.var}s.vcf"
+        grep -v "PASS" "vc/hapCaller_raw_withExternal.filtered_{wildcards.var}s.vcf" > "vc/hapCaller_raw_withExternal.failed_{wildcards.var}s.vcf"
+        '''
+
+rule prep_indels:
+    input:
+        "vc/hapCaller_raw_withExternal.pass_INDELs.vcf"
+    output:
+       monoAllel_vcf="vc/hapCaller_raw_withExternal.pass_INDELs.monoAllel.vcf",
+       edit_vcf="vc/hapCaller_raw_withExternal.pass_INDELs.monoAllel_edit.vcf",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 24
+    threads:1
+    shell:
+        '''
+        awk '/#/{{print;next}}{{if($5 !~ /,/){{print}}}}' {input} > {output.monoAllel_vcf}
+        awk 'BEGIN{{FS="\t";OFS="\t"}}/#/{{print;next}}{{if(length($4)>1){{$5!="A"?$4="A":$4="T";}};if(length($5)>1){{$4!="A"?$5="A":$5="T";}};print;}}' {output.monoAllel_vcf} > {output.edit_vcf}
+        '''
 
 rule findTargetReads:
     input:
         seq="data/trimmed/{read}.fastq.gz",
         bait="targetReads_grep/bait_Allkmers.txt",
     output:
-        fq="targetReads_grep/singleFiles/read}_target_reads.fq",
+        fq="targetReads_grep/singleFiles/{read}_target_reads.fq",
         fa="targetReads_grep/singleFiles/{read}_target_reads.fa",
     resources:
         walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,

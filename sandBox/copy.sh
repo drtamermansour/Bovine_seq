@@ -1,55 +1,59 @@
 current_dir="Tamer/Bovine_seq"
-new_dir="Tamer2/Bovine_seq" ## "Tamer/Bovine_seq"
-mkdir -p ../../$new_dir/{refGenome,data,qc,vc}
-cp * ../../$new_dir/.
-cp -R hpcc* ../../$new_dir/.
-cp -R .git ../../$new_dir/.
-cp refGenome/*.fa ../../$new_dir/refGenome/.
-cp -R refGenome/*Index ../../$new_dir/refGenome/.
-cp -R data/fastq ../../$new_dir/data/.
-cp -R data/trimmed ../../$new_dir/data/.
-cp -R qc/fastqc ../../$new_dir/qc/.
-cp -R qc/multiqc ../../$new_dir/qc/.
-cp -R data/mapped_reads ../../$new_dir/data/.
-cp -R data/sorted_reads ../../$new_dir/data/.
-cp -R data/merged_reps ../../$new_dir/data/.  ## replaced by the "select merged_reps" module
-cp -R qc/mappingQC ../../$new_dir/qc/.        ## replaced by the "select mappingQC" module
-cp -R data/dedup ../../$new_dir/data/.        ## replaced by the "select dedup" module
-cp -R vc/hapCaller_single ../../$new_dir/vc/.        ## replaced by the "select gvcf" module
-cp -R vc/combineGVCF ../../$new_dir/vc/.        ## replaced by the "select combined gvcf" module
-cp -R reports ../../$new_dir/.
-cp -R logs* ../../$new_dir/.
+new_dir="$SCRATCH/Tamer2/Bovine_seq" ## "$HOME/Tamer/Bovine_seq"
+mkdir -p $new_dir/{refGenome,data,qc,vc}
+cp * $new_dir/.
+cp -R hpcc* $new_dir/.
+cp -R .git $new_dir/.
+cp refGenome/*.fa $new_dir/refGenome/.
+cp -R refGenome/*Index $new_dir/refGenome/.
+cp -R data/fastq $new_dir/data/.
+cp -R data/trimmed $new_dir/data/.
+cp -R qc/fastqc $new_dir/qc/.
+cp -R qc/multiqc $new_dir/qc/.
+cp -R data/mapped_reads $new_dir/data/.
+cp -R data/sorted_reads $new_dir/data/.
+cp -R data/merged_reps $new_dir/data/.  ## replaced by the "select merged_reps" module
+cp -R qc/mappingQC $new_dir/qc/.        ## replaced by the "select mappingQC" module
+cp -R data/dedup $new_dir/data/.        ## replaced by the "select dedup" module
+cp -R vc/hapCaller_single $new_dir/vc/.        ## replaced by the "select gvcf" module
+cp -R vc/combineGVCF $new_dir/vc/.        ## replaced by the "select combined gvcf" module
+cp -R vc/hapCaller_raw_withExternal.vcf* $new_dir/vc/.
+cp -R vc/batch* $new_dir/vc/.
+cp -R reports $new_dir/.
+cp -R logs* $new_dir/.
 
-cp -R targetRead* ../../$new_dir/.
-cp -R singleFiles ../../$new_dir/.
+cp -R targetRead* $new_dir/.
+cp -R singleFiles $new_dir/.
 
-cp -R .snakemake ../../$new_dir/.
+cp -R .snakemake $new_dir/.
+cp -R sandBox $new_dir/.
 
 #####################
 ext="external/SRP072240"
-mkdir -p ../../$new_dir/$ext/{refGenome,data,qc,vc}
-cp $ext/* ../../$new_dir/$ext/.
-cp -R $ext/hpcc* ../../$new_dir/$ext/.
-#cp -R $ext/.git ../../$new_dir/$ext/.
-cp $ext/refGenome/*.fa ../../$new_dir/$ext/refGenome/.
-cp -R $ext/refGenome/*Index ../../$new_dir/$ext/refGenome/.
-cp -R $ext/data/fastq ../../$new_dir/$ext/data/.
-cp -R $ext/data/trimmed ../../$new_dir/$ext/data/.
-cp -R $ext/qc/fastqc ../../$new_dir/$ext/qc/.
-cp -R $ext/qc/multiqc ../../$new_dir/$ext/qc/.
-cp -R $ext/data/mapped_reads ../../$new_dir/$ext/data/.
-cp -R $ext/data/sorted_reads ../../$new_dir/$ext/data/.
-#cp -R $ext/data/merged_reps ../../$new_dir/$ext/data/. 
-for singleSample in data/sorted_reads/SRP072240/*.bam;do 
+mkdir -p $new_dir/$ext/{refGenome,data,qc,vc}
+cp $ext/* $new_dir/$ext/.
+cp -R $ext/hpcc* $new_dir/$ext/.
+#cp -R $ext/.git $new_dir/$ext/.
+cp $ext/refGenome/*.fa $new_dir/$ext/refGenome/.
+cp -R $ext/refGenome/*Index $new_dir/$ext/refGenome/.
+cp -R $ext/data/fastq $new_dir/$ext/data/.
+cp -R $ext/data/trimmed $new_dir/$ext/data/.
+cp -R $ext/qc/fastqc $new_dir/$ext/qc/.
+cp -R $ext/qc/multiqc $new_dir/$ext/qc/.
+cp -R $ext/data/mapped_reads $new_dir/$ext/data/.
+cp -R $ext/data/sorted_reads $new_dir/$ext/data/.
+#cp -R $ext/data/merged_reps $new_dir/$ext/data/. 
+mkdir $new_dir/$ext/data/merged_reps
+for singleSample in $new_dir/$ext/data/sorted_reads/SRP072240/*.bam;do 
   newSample=$(basename $singleSample); 
-  ln -s $(pwd)/$singleSample data/merged_reps/$newSample;done
-cp -R $ext/qc/mappingQC ../../$new_dir/$ext/qc/.
-cp -R $ext/data/dedup ../../$new_dir/$ext/data/.
-cp -R $ext/vc/hapCaller_single ../../$new_dir/$ext/vc/. 
-cp -R $ext/vc/combineGVCF ../../$new_dir/$ext/vc/.
-cp -R $ext/logs* ../../$new_dir/$ext/.
+  ln -s $singleSample $new_dir/$ext/data/merged_reps/$newSample;done
+cp -R $ext/qc/mappingQC $new_dir/$ext/qc/.
+cp -R $ext/data/dedup $new_dir/$ext/data/.
+cp -R $ext/vc/hapCaller_single $new_dir/$ext/vc/. 
+cp -R $ext/vc/combineGVCF $new_dir/$ext/vc/.
+cp -R $ext/logs* $new_dir/$ext/.
 
-#cp -R $ext/.snakemake ../../$new_dir/$ext/.
+#cp -R $ext/.snakemake $new_dir/$ext/.
 
 ####################
 ## select merged_reps
