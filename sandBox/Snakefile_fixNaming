@@ -1,0 +1,43 @@
+import glob
+
+fastq_pattern = "data/fastq/10_*/*_001.fastq.gz"
+fastq_files = glob.glob(fastq_pattern)
+fragment_ids = list(set([fq[11:-16] for fq in fastq_files]))
+
+rule all:
+    input:
+        expand("data/temp_sorted_reads/{fragment}.bam", fragment=fragment_ids),
+
+
+rule bwa_map:
+    input:
+        r1="data/trimmed/{fragment}_R1_001.fastq.gz",
+    output:
+        "data/temp_sorted_reads/{fragment}.bam",
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000 * 16
+    threads:1
+    shell:
+        '''
+        module load picard/2.18.1-Java-1.8.0_152
+        name=$(basename {input.r1})
+        SM=$(echo $name | cut -d "_" -f1)
+        LB=$(echo $name | cut -d"_" -f1,2)  ## We use <Index.Sequence> in the Illumina file name as an index to the library
+        batch=$(basename "$(dirname {input.r1})")
+        if [ "$batch" != "trimmed" ];then LB=$batch.$LB;fi
+        PL="Illumina" 
+        header=$(head -n1 <(zcat {input.r1}) | grep ':*:*:*:*:*:*')
+        if [ "$header" != "" ]; then
+            RGID=$(echo "$header" | sed 's/:/_/g' |cut -d "_" -f1,2,3,4)
+        else # "make unique ID and PU using checksum"
+            checksum=$(shasum {input.r1} | awk '{{ print $1 }}')
+            RGID="UnChrPU_"$checksum
+        fi
+        PU=$RGID.$LB
+        echo RGID $RGID LB $LB PL $PL PU $PU SM $SM
+        input=data/sorted_reads/{wildcards.fragment}.bam
+        java -jar $EBROOTPICARD/picard.jar AddOrReplaceReadGroups I=$input O={output} RGID=$RGID RGLB=$LB RGPL=$PL RGPU=$PU RGSM=$SM
+        '''
+
+

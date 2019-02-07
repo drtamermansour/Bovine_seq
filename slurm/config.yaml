@@ -2,6 +2,7 @@ cluster: "slurm-submit.py --depend \"{dependencies}\""
 cluster-status: "slurm-status.py"
 jobscript: "slurm-jobscript.sh"
 jobs: 5000
+cores: 5000 
 immediate-submit: True
 verbose: True
 notemp: True

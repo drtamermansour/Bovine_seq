@@ -1,0 +1,162 @@
+import os.path
+import glob
+
+fastq_pattern = "data/fastq/*/*_001.fastq.gz"
+fastq_files = glob.glob(fastq_pattern)
+#read_ids = [fq[11:-9] for fq in fastq_files] ## name of catlas
+read_ids = ['12_19_17/AVEAY001A_S20_L003_R1_001']
+
+# sequence files to use when building catlas
+#input_sequences = 'data/trimmed/12_19_17/AVEAY001A_S20_L003_R1_001.fastq.gz'.split()
+
+# name of catlas
+#catlas_base = "test"  ## should represent the sample. Replicate the fastqc rule  
+
+# k-mer size to use for everything
+ksize = 25
+
+# radius for catlas building
+radius = 1
+
+# query sequence
+query = 'bait.fa'
+
+### build some variables for internal use
+catlas_dir = '{}_k{}_r{}'.format(read_ids, ksize, radius)
+#search_dir = '{}_k{}_r{}_search_oh{}{}'.format(read_ids, ksize, radius, int(overhead*100), search_out_suffix)
+
+#input_list = 'bcalm.{}.k{}.inputlist.txt'.format(catlas_base, ksize)
+#if os.path.isfile(input_list):
+#    print("inputlist exists already, it will be used")
+#else: 
+#    with open(input_list, 'wt') as fp:
+#        for name in input_sequences:
+#            fp.write('{}\n'.format(name))
+
+# internal definitions for convenience:
+python=sys.executable  # define as the version of Python running snakemake
+
+
+# interleave PE reads and trim erroneous k-mers
+#interleave-reads.py mouse.all.Left.fq  mouse.all.Right.fq \
+#    | trim-low-abund.py -M 20e9 -C 3 \
+#        -Z 20 -V --gzip -o mouse.abundtrim.fq.gz -
+
+rule all:
+    input:
+        expand("targetReads/inputlist/{catlas_base}.k{ksize}.inputlist.txt", catlas_base=read_ids, ksize=ksize),
+        expand("targetReads/bcalm/{catlas_base}.k{ksize}.unitigs.fa", catlas_base=read_ids, ksize=ksize),
+        expand("targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz", catlas_base=read_ids, ksize=ksize, radius=radius),
+        expand("targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/catlas.csv", catlas_base=read_ids, ksize=ksize, radius=radius),
+        expand("targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.indices", catlas_base=read_ids, ksize=ksize, radius=radius),
+        expand("targetReads/search/{catlas_base}.k{ksize}.r{radius}/results.csv", catlas_base=read_ids, ksize=ksize, radius=radius),
+#        "test_rule.txt",
+
+# create list of input files for bcalm
+rule bcalm_cdbg_inpfiles:
+    input:
+        "data/fastq/{catlas_base}.fastq.gz" #input_sequences
+    output:
+        "targetReads/inputlist/{catlas_base}.k{ksize}.inputlist.txt" #"bcalm.{catlas_base}.k{ksize}.inputlist.txt"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 30,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
+    run:
+#        with open("targetReads/inputlist/{catlas_base}.k{ksize}.inputlist.txt".format(catlas_base=catlas_base, ksize=ksize), 'wt') as fp:
+        with open({output}, 'wt') as fp:
+            for name in input_sequences:
+                fp.write('{}\n'.format(name))
+
+# build cDBG using bcalm
+rule bcalm_cdbg:
+    input:
+        "targetReads/inputlist/{catlas_base}.k{ksize}.inputlist.txt" #"bcalm.{catlas_base}.k{ksize}.inputlist.txt"
+    output:
+        "targetReads/bcalm/{catlas_base}.k{ksize}.unitigs.fa" #"{catlas_base}/bcalm.{catlas_base}.k{ksize}.unitigs.fa"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 16
+    threads:4
+    shell:
+        "bcalm -in {input} -out targetReads/bcalm/{wildcards.catlas_base}.k{ksize} -kmer-size {ksize} -abundance-min 1 -nb-cores {threads} >& {output}.log.txt"
+
+# build catlas input from bcalm output by reformatting
+rule bcalm_catlas_input:
+    input:
+#        expand("targetReads/bcalm/{catlas_base}.k{ksize}.unitigs.fa", ksize=ksize, catlas_base=catlas_base)
+        "targetReads/bcalm/{catlas_base}.k{ksize}.unitigs.fa"
+    output:
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/cdbg.gxt",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.info.csv"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 32
+    shell:
+        "PYTHONPATH=$HOME/spacegraphcats {python} -m search.bcalm_to_gxt -k {ksize} {input} targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius}/cdbg.gxt targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius}/contigs.fa.gz"
+
+# build catlas!
+rule build_catlas:
+    input:
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/cdbg.gxt",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz",
+    output:
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/first_doms.txt",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/catlas.csv"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 32
+    shell:
+        "PYTHONPATH=$HOME/spacegraphcats {python} -m spacegraphcats.catlas --no_checkpoint targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius} {radius}"
+
+# index contigs, count node sizes
+rule make_contigs_kmer_index:
+    input:
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz"
+    output:
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.mphf",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.indices"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 64
+    shell:
+        "PYTHONPATH=$HOME/spacegraphcats {python} -m search.index_contigs_by_kmer -k {ksize} targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius}"
+
+# do a full search!
+rule search:
+    input:
+        {query},
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/first_doms.txt",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/catlas.csv",
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.mphf", 
+        "targetReads/catlas/{catlas_base}.k{ksize}.r{radius}/contigs.fa.gz.indices", 
+    output:
+        "targetReads/search/{catlas_base}.k{ksize}.r{radius}/results.csv",
+#        make_query_base(config['search']),
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 * 4,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 64
+    shell:
+        ```
+        #PYTHONPATH=$HOME/spacegraphcats {python} -m search.extract_nodes_by_query targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius} targetReads/search/{wildcards.catlas_base}.k{ksize}.r{radius} --query {query} -k {ksize}
+        ## my suggested command ## the query sequence might need to be gziped ## I am not sure about the output naming
+        PYTHONPATH=$HOME/spacegraphcats {python} -m search.extract_contigs_cdbg -k {ksize} -o {output} targetReads/catlas/{wildcards.catlas_base}.k{ksize}.r{radius} {query}
+        ```
+
+# test rule
+rule test:
+    output:
+        "test_rule.txt"
+    resources:
+        walltime = lambda wildcards, attempt: 2**(attempt - 1) * 60 * 60 ,
+        mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000
+    shell:
+        '''
+        sleep 60
+        echo "done sleeping" > test_rule.txt
+        '''
+
+
+
+
+
