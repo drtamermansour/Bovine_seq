@@ -1,25 +1,6 @@
-## download the data of the 1st 3 patches from the hard disk
-mkdir Bovine_seq/data/fastq
-cd Bovine_seq/data/fastq
-
-## download the data from the 4th patch (ftp server
-cd Bovine_seq/data/fastq/5_2_18/
-for f in *.gz;do
-newf=$(echo $f | sed 's/_/0/') 
-echo $newf;
-mv $f $newf;
-done
-
-## ftp download
-wget --no-verbose --no-parent --recursive --level=1 --no-directories --user=gslftp --password=gsl23ftp! ftp://gslserver.qb3.berkeley.edu/181004_150PE_HS4K2A/L235678/Young/AVEAY*
-
-cd Bovine_seq/data/fastq/10_9_18/
-for f in *.gz;do
-newf=$(echo $f | sed 's/_/0/')
-echo $newf;
-mv $f $newf;
-done
-	
+## Data downlowd 
+## Raw data was organizied by batches in Bovine_seq/data/fastq directory. The directory structure of raw data in Bovine_seq/sandBox/rawData_dir.txt
+## Raw data can be downloaded from SRA. SRA info can be found in Bovine_seq/sandBox/metadata-4898878-processed-ok.tsv
 
 ## download data from SRP072240 (Carlson et al. 2016 paper)
 ## Whole genome sequencing of two edited calves along with those of their progenitor cell lines, 2122 and 2120
@@ -41,7 +22,6 @@ curl ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR329/005/SRR3290535/SRR3290535_2.fastq
 ## downlaod the software you need on the server
 ## multiQC (for Slurm configuration)
 conda create -n multiQC multiqc==1.6
-
 ## GATK
 # https://software.broadinstitute.org/gatk/documentation/quickstart
 # 1. Requirements
@@ -150,41 +130,35 @@ plink --file plink/pruned_allSnp --allow-no-sex --cow --make-bed --out plink/pru
 plink --bfile plink/pruned_allSnp.binary --distance square allele-ct ibs 1-ibs --cow --allow-no-sex --out plink/distance ## Excluding 25414 variants on non-autosomes
 awk 'FNR==NR{a[$1]=$0;next}{ print a[$1]}' myIDs plink/distance.mdist.id > plink/distance.myIDs
 ## R (using the 1 minus the identity-by-state value distances)
-library(ape)
-setwd("plink")
-mdist_id=read.table("distance.myIDs") # This is a version of "distance.mdist.id" with more columns for alt ids
-mdist_table=read.table("distance.mdist", fill=T, col.names=mdist_id$V3)
-mdist=as.dist(mdist_table)
-hc = hclust(mdist) ## setwd("~/Desktop/FileZilla_client/breedSp/clustering_brachy"); save(hc, file="hclust.rda"); load("hclust.rda"); 
-# vector of colors
-#mypal = c("#556270", "#4ECDC4", "#1B676B", "#FF6B6B", "#C44D58")
-mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")
-# cutting dendrogram in 5 clusters
-clus = cutree(hc, 12)
-# plot
-png(file="fan600.png",width=6500,height=6500,res=600, type="cairo")
-plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)
-dev.off()
+## distance.myIDs is a version of "distance.mdist.id" with more columns for alt ids
+Rscript -e 'args=(commandArgs(TRUE));'\
+'library(ape)'\
+'setwd("plink")'\
+'mdist_id=read.table(args[1])'\
+'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3)'\
+'mdist=as.dist(mdist_table)'\
+'hc = hclust(mdist)'\
+'mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")'\
+'clus = cutree(hc, 12)'\
+'png(file="fan600.png",width=6500,height=6500,res=600, type="cairo")'\
+'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)'\
+'dev.off()' distance.myIDs distance.mdist
 
 ## IBS similarity matrix using all variants
 plink --bfile plink/allSnp.binary --distance square allele-ct ibs 1-ibs --cow --allow-no-sex --out plink/distanceAll ## Excluding 387045 variants on non-autosomes
 ## R (using the 1 minus the identity-by-state value distances)
-library(ape)
-setwd("plink")
-mdist_id=read.table("distance.myIDs")
-mdist_table=read.table("distanceAll.mdist", fill=T, col.names=mdist_id$V3)
-mdist=as.dist(mdist_table)
-hc = hclust(mdist) 
-# vector of colors
-#mypal = c("#556270", "#4ECDC4", "#1B676B", "#FF6B6B", "#C44D58")
-mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")
-# cutting dendrogram in 5 clusters
-clus = cutree(hc, 12)
-# plot
-png(file="fan600_All.png",width=6000,height=6000,res=600, type="cairo")
-plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)
-dev.off()
-
+Rscript -e 'args=(commandArgs(TRUE));'\
+'library(ape)'\
+'setwd("plink")'\
+'mdist_id=read.table(args[1])'\
+'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3)'\
+'mdist=as.dist(mdist_table)'\
+'hc = hclust(mdist)'\ 
+'mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")'\
+'clus = cutree(hc, 12)'\ 
+'png(file="fan600_All.png",width=6000,height=6000,res=600, type="cairo")'\
+'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)'\
+'dev.off()' distance.myIDs distanceAll.mdist
 
 
 ## statistics of Mendel errors in trios using pruned marker
@@ -249,21 +223,18 @@ plink --file plink/pruned_goodSnp --allow-no-sex --cow --make-bed --out plink/pr
 plink --bfile plink/pruned_goodSnp.binary --distance square allele-ct ibs 1-ibs --cow --allow-no-sex --out plink/distanceGood ## Excluding 24683 variants on non-autosomes
 awk 'FNR==NR{a[$1]=$0;next}{ print a[$1]}' myIDs plink/distanceGood.mdist.id > plink/distanceGood.myIDs
 ## R (using the 1 minus the identity-by-state value distances)
-library(ape)
-setwd("plink")
-mdist_id=read.table("distanceGood.myIDs")
-mdist_table=read.table("distanceGood.mdist", fill=T, col.names=mdist_id$V3)
-mdist=as.dist(mdist_table)
-hc = hclust(mdist)
-# vector of colors
-#mypal = c("#556270", "#4ECDC4", "#1B676B", "#FF6B6B", "#C44D58")
-mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")
-# cutting dendrogram in 5 clusters
-clus = cutree(hc, 12)
-# plot
-png(file="fan600_Good.png",width=6500,height=6500,res=600, type="cairo")
-plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)
-dev.off()
+Rscript -e 'args=(commandArgs(TRUE));'\
+'library(ape)'\
+'setwd("plink")'\
+'mdist_id=read.table(args[1])'\
+'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3)'\
+'mdist=as.dist(mdist_table)'\
+'hc = hclust(mdist)'\
+'mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")'\
+'clus = cutree(hc, 12)'\
+'png(file="fan600_Good.png",width=6500,height=6500,res=600, type="cairo")'\
+'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)'\
+'dev.off()' distanceGood.myIDs distanceGood.myIDs
 
 
 ## statistics of Mendel errors in trios using 645697 pruned marker

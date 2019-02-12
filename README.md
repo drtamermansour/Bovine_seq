@@ -1,25 +1,14 @@
-## start up the project 
+## Comparative evaluation of the phenotype and genome from offspring of a genome edited, hornless bull and controls
+===================================================================================================================
+
+# start up the project 
+
 ```
 ## Clone the repo to your hard disk
 git clone https://github.com/drtamermansour/Bovine_seq.git
 cd Bovine_seq
-## delete the hpcc (Do not worry, the setup script will make it again)
-rm -r hpcc
-## get the data folder 
-mv /path/to/your/data . 
+## delete the slurm and hpcc folders (Do not worry, the setup script will make it again)
+rm -r slurm hpcc
+## follow the main.sh script to re-run the analysis
 ```
 
-## Install Snakemake using conda & deploy PBS profile
-```
-bash snakemake_setup.sh 
-```
-
-## Run Snakemake
-```
-# 1. add conda and the hpcc folder to you path
-export PATH=$HOME/miniconda3/bin:$(pwd)/hpcc:$PATH
-# 2. turn on the environment
-source activate snakemake
-# 3. run by the submoit script
-. hpcc/submit.sh
-```
