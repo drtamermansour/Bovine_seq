@@ -1,5 +1,5 @@
-## Comparative evaluation of the phenotype and genome from offspring of a genome edited, hornless bull and controls
-===================================================================================================================
+## Comparative evaluation of the phenotype and genome from offspring of a genome edited, hornless bull and controls ##
+
 
 # start up the project 
 
