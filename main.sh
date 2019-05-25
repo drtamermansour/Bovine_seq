@@ -362,6 +362,26 @@ plink --bfile plink/goodSnp_forMendel.binary --cow --allow-no-sex --mendel --out
 tail -n+2 plink/mendel_NewSeq.mendel | awk '{A[$1" "$2]++}END{for(i in A)print i,A[i]}'
 #rm plink/tempFam*
 
+mkdir -p mendelErrors
+rm mendelErrors/*.err
+tail -n+2 plink/mendel_NewSeq.mendel | awk '{print $2,$3,$4}' | awk -F"[ \t:]" '{print $1,$2,$4}' | while read id chr pos;do echo $chr $pos >> mendelErrors/$id.err;done
+for f in mendelErrors/*.err;do
+cat $f | ./createHist.sh > $f.hist
+#cat $f | ./createHist.sh | awk -F"[. ]" '{print $1"."$2,$1,$2,$3}' | sort -k2,2n -k3,3n > $f.hist
+done
+python merge_tables.py mendelErrors/AVEAY*.hist > mendelErrors.hist
+python filter_table.py mendelErrors.hist 5 > mendelErrors_filetred.hist
+sed 's/key/chr\tpos/; s/.err.hist//g' mendelErrors_filetred.hist | tr '.' '\t' | awk 'NR==1;NR>1{print|"sort -k2,2n -k3,3n"}' > mendelErrors_filetred_sorted.hist
+
+module purge
+module load GCC/7.3.0-2.30 OpenMPI/3.1.1
+module load R/3.5.1-X11-20180604
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=TRUE);'\
+'png(file="mendErr.png",width=6500,height=6500,res=600, type="cairo");'\
+'boxplot(data[c(4:15)],las=2,par(mar = c(6.1, 4.1, 4.1, 2.1)));'\
+'dev.off();' mendelErrors_filetred_sorted.hist
+
 
 ###############
 ## generate stats
@@ -369,5 +389,8 @@ bash summary_stats.sh
 ###############
 
 ## Run the kmer bait analysis
-bash sandBox/targetRead_grep.sh
+bash targetRead_grep.sh
+bash targetRead_grep_plasmid.sh
+bash targetRead_grep_plasmidClone.sh
+
 

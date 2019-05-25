@@ -19,7 +19,7 @@ while read header; read line;do
     kmer=`expr substr $line $i $k`;
     echo $kmer;done
     #echo -e "$header.position.$i\n$kmer";done
-done < bait_unwrapped.fa | tr "atcg" "ATCG" | sort | uniq > bait_kmers.txt
+done < bait_unwrapped.fa | grep -iv n | tr "atcg" "ATCG" | sort | uniq > bait_kmers.txt
 
 ## find reverse complement kmers
 cat bait_kmers.txt | rev | tr "ATGC" "TACG" > bait_rckmers.txt
