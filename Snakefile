@@ -368,11 +368,16 @@ rule GATK_index:
         mem = lambda wildcards, attempt: 2**(attempt - 1) * 1000000000 * 8
     shell:
         '''
+        mkdir -p refGenome/gatkIndex
         if [ ! -f refGenome/gatkIndex/genome.fa ];then ln -s ../ARS-UCD1.2_chr.fa refGenome/gatkIndex/genome.fa;fi
-        module load SAMTools/1.5
-        module load picardTools/1.89
+        module swap GNU GNU/5.4.0-2.26
+        module swap OpenMPI OpenMPI/1.10.3
+        module load SAMtools/1.5
+        module load picard/2.18.1-Java-1.8.0_152
+        #module load picardTools/1.89
         samtools faidx "refGenome/gatkIndex/genome.fa"
-        java -Xmx4g -jar $PICARD/CreateSequenceDictionary.jar R= {input} O= {output.dict}
+        java -Xmx4g -jar $EBROOTPICARD/picard.jar CreateSequenceDictionary R= {input} O= {output.dict}
+        #java -Xmx4g -jar $PICARD/CreateSequenceDictionary.jar R= {input} O= {output.dict}
         '''
 
 rule download_knowVar:
@@ -462,6 +467,7 @@ rule ApplyBQSR:
 # https://software.broadinstitute.org/gatk/documentation/article?id=3893
 # https://software.broadinstitute.org/gatk/documentation/tooldocs/4.0.9.0/org_broadinstitute_hellbender_tools_walkers_haplotypecaller_HaplotypeCaller.php
 # https://software.broadinstitute.org/gatk/documentation/article?id=11073
+# https://software.broadinstitute.org/gatk/documentation/article?id=11068
 rule HaplotypeCaller_single:
     input:
         "refGenome/gatkIndex/genome.fa.fai", "refGenome/gatkIndex/genome.dict",

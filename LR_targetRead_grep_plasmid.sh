@@ -1,3 +1,4 @@
+cd BovineSeq_LR
 work_dir=$(pwd)
 mkdir -p ./targetReads_grep_plasmid
 ## data processing

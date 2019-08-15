@@ -223,18 +223,31 @@ plink --file plink/pruned_goodSnp --allow-no-sex --cow --make-bed --out plink/pr
 plink --bfile plink/pruned_goodSnp.binary --distance square allele-ct ibs 1-ibs --cow --allow-no-sex --out plink/distanceGood ## Excluding 24683 variants on non-autosomes
 awk 'FNR==NR{a[$1]=$0;next}{ print a[$1]}' myIDs plink/distanceGood.mdist.id > plink/distanceGood.myIDs
 ## R (using the 1 minus the identity-by-state value distances)
+#Rscript -e 'args=(commandArgs(TRUE));'\
+#'library(ape)'\
+#'setwd("plink")'\
+#'mdist_id=read.table(args[1])'\
+#'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3)'\
+#'mdist=as.dist(mdist_table)'\
+#'hc = hclust(mdist)'\
+#'mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")'\
+#'clus = cutree(hc, 12)'\
+#'png(file="fan600_Good.png",width=6500,height=6500,res=600, type="cairo")'\
+#'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)'\
+#'dev.off()' distanceGood.myIDs distanceGood.mdist
+
 Rscript -e 'args=(commandArgs(TRUE));'\
-'library(ape)'\
-'setwd("plink")'\
-'mdist_id=read.table(args[1])'\
-'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3)'\
-'mdist=as.dist(mdist_table)'\
-'hc = hclust(mdist)'\
-'mypal = c("red", "blue", "green", "gold", "black", "blueviolet","coral4","cadetblue", "darkred", "darkslategray", "darkorange3", "firebrick")'\
-'clus = cutree(hc, 12)'\
-'png(file="fan600_Good.png",width=6500,height=6500,res=600, type="cairo")'\
-'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002)'\
-'dev.off()' distanceGood.myIDs distanceGood.myIDs
+'library(ape);'\
+'setwd("plink");'\
+'mdist_id=read.table(args[1]);'\
+'mdist_table=read.table(args[2], fill=T, col.names=mdist_id$V3);'\
+'mdist=as.dist(mdist_table);'\
+'hc = hclust(mdist);'\
+'mypal = c("#000099", "#006600", "#0099ff", "#330066", "#33cc00", "#660000","#6600ff","#666600", "#666666", "#990000", "#996600", "#cc0000");'\
+'clus = cutree(hc, 12);'\
+'png(file="fan600_Good_newColorSet.png",width=6500,height=6500,res=600, type="cairo");'\
+'plot(as.phylo(hc), type = "fan", cex = 1, font=2, use.edge.length = TRUE, tip.color = mypal[clus], label.offset = 0.002);'\
+'dev.off();' distanceGood.myIDs distanceGood.mdist
 
 
 ## statistics of Mendel errors in trios using 645697 pruned marker
@@ -363,7 +376,7 @@ tail -n+2 plink/mendel_NewSeq.mendel | awk '{A[$1" "$2]++}END{for(i in A)print i
 #rm plink/tempFam*
 
 mkdir -p mendelErrors
-rm mendelErrors/*.err
+rm -rf mendelErrors/*.err
 tail -n+2 plink/mendel_NewSeq.mendel | awk '{print $2,$3,$4}' | awk -F"[ \t:]" '{print $1,$2,$4}' | while read id chr pos;do echo $chr $pos >> mendelErrors/$id.err;done
 for f in mendelErrors/*.err;do
 cat $f | ./createHist.sh > $f.hist
@@ -382,15 +395,168 @@ Rscript -e 'args=(commandArgs(TRUE));'\
 'boxplot(data[c(4:15)],las=2,par(mar = c(6.1, 4.1, 4.1, 2.1)));'\
 'dev.off();' mendelErrors_filetred_sorted.hist
 
+############################
+## repeat the non-filtered analysis including sex
+mkdir plink2
+## statistics of Mendel errors in trios using filtered (but not pruned) markers
+ln -s $(pwd)/plink/goodSnp_filter_forMendel.binary.bed $(pwd)/plink2/.
+ln -s $(pwd)/plink/goodSnp_filter_forMendel.binary.bim $(pwd)/plink2/.
+cp plink/goodSnp_filter.binary.fam plink2/tempFam
+awk '{if($1=="AVEAY012A")print "Trio1",$2,"AVEAY0010B","AVEAY013A","1",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY012B")print "Trio1",$2,"AVEAY0010B","AVEAY013B","2",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY14A")print "Trio1",$2,"AVEAY0010B","AVEAY14B","1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY0010B")print "Trio1",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY013A")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam5
+awk '{if($1=="AVEAY013B")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam5 > plink2/tempFam6
+awk '{if($1=="AVEAY14B")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam6 > plink2/tempFam
+
+awk '{if($1=="AVEAY001B")print "Trio2",$2,"AVEAY15B","AVEAY004B","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY002A")print "Trio2",$2,"AVEAY15B","AVEAY006A","1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY002B")print "Trio2",$2,"AVEAY15B","AVEAY15A","1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY003A")print "Trio2",$2,"AVEAY15B","AVEAY007A","1",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY003B")print "Trio2",$2,"AVEAY15B","AVEAY16A","1",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam5
+awk '{if($1=="AVEAY004A")print "Trio2",$2,"AVEAY15B","AVEAY006B","1",$6;else print $0;}' plink2/tempFam5 > plink2/tempFam6
+awk '{if($1=="AVEAY15B")print "Trio2",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam6 > plink2/tempFam7
+awk '{if($1=="AVEAY004B")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam7 > plink2/tempFam8
+awk '{if($1=="AVEAY006A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam8 > plink2/tempFam9
+awk '{if($1=="AVEAY15A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam9 > plink2/tempFam10
+awk '{if($1=="AVEAY007A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam10 > plink2/tempFam11
+awk '{if($1=="AVEAY16A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam11 > plink2/tempFam12
+awk '{if($1=="AVEAY006B")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam12 > plink2/tempFam
+
+awk '{if($1=="AVEAY007B")print "Trio3",$2,"AVEAY011B","AVEAY0010A","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY011B")print "Trio3",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY0010A")print "Trio3",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam
+
+awk '{if($1=="AVEAY008A")print "Trio4",$2,"AVEAY011A","AVEAY009B","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY008B")print "Trio4",$2,"AVEAY011A","AVEAY009A","1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY011A")print "Trio4",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY009B")print "Trio4",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY009A")print "Trio4",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam
+
+cp plink2/tempFam plink2/goodSnp_filter_forMendel.binary.fam
+plink --bfile plink2/goodSnp_filter_forMendel.binary --cow --mendel --out "plink2/filtered_mendel_NewSeq"
+tail -n+2 plink2/filtered_mendel_NewSeq.mendel | awk '{A[$1" "$2]++}END{for(i in A)print i,A[i]}' > plink2/filtered_mendel_NewSeq.mendel.summary
+cat plink2/filtered_mendel_NewSeq.mendel.summary | sed 's/Trio1/Ho.H./' | sed 's/Trio2/GH.H./' | sed 's/Trio[34]/H.H./' > plink2/filtered_mendel_NewSeq.mendel.summary2
+#rm plink2/tempFam*
+
+
+## statistics of Mendel errors in trios using all (not even filtered) markers
+ln -s $(pwd)/plink/goodSnp_forMendel.binary.bed $(pwd)/plink2/.
+ln -s $(pwd)/plink/goodSnp_forMendel.binary.bim $(pwd)/plink2/.
+cp plink/goodSnp.binary.fam plink2/tempFam
+awk '{if($1=="AVEAY012A")print "Trio1",$2,"AVEAY0010B","AVEAY013A","1",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY012B")print "Trio1",$2,"AVEAY0010B","AVEAY013B","2",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY14A")print "Trio1",$2,"AVEAY0010B","AVEAY14B","1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY0010B")print "Trio1",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY013A")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam5
+awk '{if($1=="AVEAY013B")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam5 > plink2/tempFam6
+awk '{if($1=="AVEAY14B")print "Trio1",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam6 > plink2/tempFam
+
+awk '{if($1=="AVEAY001B")print "Trio2",$2,"AVEAY15B","AVEAY004B","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY002A")print "Trio2",$2,"AVEAY15B","AVEAY006A","1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY002B")print "Trio2",$2,"AVEAY15B","AVEAY15A","1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY003A")print "Trio2",$2,"AVEAY15B","AVEAY007A","1",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY003B")print "Trio2",$2,"AVEAY15B","AVEAY16A","1",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam5
+awk '{if($1=="AVEAY004A")print "Trio2",$2,"AVEAY15B","AVEAY006B","1",$6;else print $0;}' plink2/tempFam5 > plink2/tempFam6
+awk '{if($1=="AVEAY15B")print "Trio2",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam6 > plink2/tempFam7
+awk '{if($1=="AVEAY004B")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam7 > plink2/tempFam8
+awk '{if($1=="AVEAY006A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam8 > plink2/tempFam9
+awk '{if($1=="AVEAY15A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam9 > plink2/tempFam10
+awk '{if($1=="AVEAY007A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam10 > plink2/tempFam11
+awk '{if($1=="AVEAY16A")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam11 > plink2/tempFam12
+awk '{if($1=="AVEAY006B")print "Trio2",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam12 > plink2/tempFam
+
+awk '{if($1=="AVEAY007B")print "Trio3",$2,"AVEAY011B","AVEAY0010A","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY011B")print "Trio3",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY0010A")print "Trio3",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam
+
+awk '{if($1=="AVEAY008A")print "Trio4",$2,"AVEAY011A","AVEAY009B","2",$6;else print $0;}' plink2/tempFam > plink2/tempFam1
+awk '{if($1=="AVEAY008B")print "Trio4",$2,"AVEAY011A","AVEAY009A","1",$6;else print $0;}' plink2/tempFam1 > plink2/tempFam2
+awk '{if($1=="AVEAY011A")print "Trio4",$2,$3,$4,"1",$6;else print $0;}' plink2/tempFam2 > plink2/tempFam3
+awk '{if($1=="AVEAY009B")print "Trio4",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam3 > plink2/tempFam4
+awk '{if($1=="AVEAY009A")print "Trio4",$2,$3,$4,"2",$6;else print $0;}' plink2/tempFam4 > plink2/tempFam
+
+cp plink2/tempFam plink2/goodSnp_forMendel.binary.fam
+plink --bfile plink2/goodSnp_forMendel.binary --cow --mendel --out "plink2/mendel_NewSeq"
+tail -n+2 plink2/mendel_NewSeq.mendel | awk '{A[$1" "$2]++}END{for(i in A)print i,A[i]}'  > plink2/mendel_NewSeq.mendel.summary
+cat plink2/mendel_NewSeq.mendel.summary | sed 's/Trio1/Ho.H./' | sed 's/Trio2/GH.H./' | sed 's/Trio[34]/H.H./' > plink2/mendel_NewSeq.mendel.summary2
+
+
+mkdir -p mendelErrors2
+rm -rf mendelErrors2/*.err
+tail -n+2 plink2/mendel_NewSeq.mendel | awk '{print $2,$3,$4}' | awk -F"[ \t:]" '{print $1,$2,$4}' | while read id chr pos;do echo $chr $pos >> mendelErrors2/$id.err;done
+for f in mendelErrors2/*.err;do
+cat $f | ./createHist.sh > $f.hist
+#cat $f | ./createHist.sh | awk -F"[. ]" '{print $1"."$2,$1,$2,$3}' | sort -k2,2n -k3,3n > $f.hist
+done
+python merge_tables.py mendelErrors2/AVEAY*.hist > mendelErrors2.hist
+python filter_table.py mendelErrors2.hist 10 > mendelErrors2_filetred.hist
+sed 's/key/chr\tpos/; s/.err.hist//g' mendelErrors2_filetred.hist | tr '.' '\t' | awk 'NR==1;NR>1{print|"sort -k2,2n -k3,3n"}' > mendelErrors2_filetred_sorted.hist
+
+
+module purge
+module load GCC/7.3.0-2.30 OpenMPI/3.1.1
+module load R/3.5.1-X11-20180604
+
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=FALSE);'\
+'anova(lm(V3 ~ V1, data));'\
+'summary(lm(V3~V1, data));' plink2/filtered_mendel_NewSeq.mendel.summary2
+
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=FALSE);'\
+'anova(lm(V3 ~ V1, data));'\
+'summary(lm(V3~V1, data));' plink2/mendel_NewSeq.mendel.summary2
+
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=TRUE);'\
+'data2=data[c(4:15)];'\
+'png(file="mendErr2.png",width=6500,height=6500,res=600, type="cairo");'\
+'boxplot(data2, las=2,par(mar = c(6.1, 4.1, 4.1, 2.1)));'\
+'dev.off();' mendelErrors2_filetred_sorted.hist
+
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=TRUE);'\
+'data2=data[c(4:15)];'\
+'data2[data2 < 1] <- 0.5;'\
+'png(file="mendErr2_log2.png",width=6500,height=6500,res=600, type="cairo");'\
+'boxplot(data2, log = "y", las=2,par(mar = c(6.1, 4.1, 4.1, 2.1)));'\
+'dev.off();' mendelErrors2_filetred_sorted.hist
+
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=TRUE);'\
+'data2=data[c(1:3)];'\
+'data2$GH.H.=round((data$AVEAY001B+data$AVEAY002A+data$AVEAY002B+data$AVEAY003A+data$AVEAY003B+data$AVEAY004A)/6,digits=1);'\
+'data2$H.H.=round((data$AVEAY007B+data$AVEAY008A+data$AVEAY008B)/3,digits=1);'\
+'data2$Ho.H.=round((data$AVEAY012A+data$AVEAY012B+data$AVEAY14A)/3,digits=1);'\
+'sig_data=data2[data2$GH.H.>10 & data2$H.H.>10 & data2$Ho.H.>10,];'\
+'write.table(sig_data,file="errornous_loci");' mendelErrors2_filetred_sorted.hist
+
+
+## for simple ANOVA test, you can use: oneway.test(values ~ ind, data3) if equal variance not assumed or oneway.test(values ~ ind, data3, var.equal=TRUE) if equal variance assumed
+## for detailed ANOVA test, you can use summary(aov(values ~ ind, data3))  and do the post-hoc tests by TukeyHSD(aov(values ~ ind, data3)). Notes that results matche oneway.test with equal variance assumed
+Rscript -e 'args=(commandArgs(TRUE));'\
+'data=read.table(args[1],header=TRUE);'\
+'GH.H.=round((data$AVEAY001B+data$AVEAY002A+data$AVEAY002B+data$AVEAY003A+data$AVEAY003B+data$AVEAY004A)/6,digits=1);'\
+'H.H.=round((data$AVEAY007B+data$AVEAY008A+data$AVEAY008B)/3,digits=1);'\
+'Ho.H.=round((data$AVEAY012A+data$AVEAY012B+data$AVEAY14A)/3,digits=1);'\
+'data2=data.frame(cbind(GH.H.,H.H.,Ho.H.)); data3 <- stack(data2);'\
+'anova(lm(values ~ ind, data3));'\
+'summary(lm(values~ind, data3));' mendelErrors2_filetred_sorted.hist
+
 
 ###############
 ## generate stats
 bash summary_stats.sh
 ###############
 
-## Run the kmer bait analysis
+## Run the kmer bait analysis on the reference genome
 bash targetRead_grep.sh
+## Run the kmer bait analysis for plasmid sequences
 bash targetRead_grep_plasmid.sh
+## Run the kmer bait anaoysis for the plasmid sequences with clone inserted in reverse complement orintation 
 bash targetRead_grep_plasmidClone.sh
+
 
 

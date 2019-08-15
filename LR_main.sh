@@ -41,7 +41,7 @@ assembly-stats <(cat data/fastq_fail/*.fastq)
 #Gaps = 0
 
 
-bash targetRead_grep_plasmid.sh
+bash targetRead_grep_plasmid.sh  ## find reads aligned to the empty TOPO plasmid
 assembly-stats  targetReads_grep_plasmid/mergedFiles/fastq_*
 #stats for targetReads_grep_plasmid/mergedFiles/fastq_fail.fa
 #sum = 454934, n = 26, ave = 17497.46, largest = 55562
@@ -100,7 +100,7 @@ conda install -c bioconda minimap2
 minimap2 -a targetReads_grep_plasmid/plasmid_match_fa/13566.fasta targetReads_grep_plasmid/bait_unwrapped.fa > 13566_plasmid.sam
 
 
-##  Create a new version of the genome with the suspected insertion 
+##  Create a new version of the genome with the suspected insertion (the plasmid with 2 clones)
 # 1. get a copy of plasmid.fa & clone_From_Carlson2016.fa
 # 2. get a copy (or short cut) for the reference genome 
 ln -s $HOME/Tamer/Bovine_seq/refGenome/ARS-UCD1.2_chr.fa .
@@ -171,7 +171,7 @@ IFS=$'\t'; cat targetReads_grep_clone/mergedFiles/fastq_*.fq | paste - - - - | \
 done &> targetReads_grep_clone/log
 
 
-##  Create a new version of the genome with the clone inserted
+##  Create a new version of the genome with the clone inserted. The co-ordinated of this insertion in this new version of the genome should be CM008168.2:2429330-2429537).  
 source activate workEnv1
 module load  BEDTools/2.27.1
 awk '/^>/ {printf("\n%s\n",$0);next; } { printf("%s",$0);}  END {printf("\n");}' < clone_From_Carlson2016.fa | tail -n +2 > clone_unwrapped.fa
@@ -195,6 +195,7 @@ cat matchReads_sugRef.sam | grep -v "^@" | awk '{print $1,$3, $4, $5, length($10
 cat plasmid_reads.sam | grep -v "^@" | awk '{print $1, $3, $4, $5, length($10)}' ## most of the reads showed supplementary alignment 
 # reads other than those previously aligned to the plasmid
 cat matchReads_sugRef.sam | grep -v "^@" | awk '{print $1}' | grep -vFwf - matchReads_insRef.sam > matchReads_insRef_noplasmid.sam
+cat matchReads_insRef_noplasmid.sam | grep -v "^@" | awk '{print $1, $3, $4, $5, length($10)}' | grep CM008168.2 | awk '$3<2429330' | awk '$3+$5>2429537'
 module load SAMtools
 samtools view -bo matchReads_insRef_noplasmid.bam matchReads_insRef_noplasmid.sam
 samtools sort matchReads_insRef_noplasmid.bam -o matchReads_insRef_noplasmid.sorted.bam
