@@ -28,15 +28,16 @@ conda create -n multiQC multiqc==1.6
 module load Java/jdk1.8.0 ## java -version ## java version "1.8.0_102"
 # 2. Get GATK
 # 2A. download: https://software.broadinstitute.org/gatk/download/
+cd ~
 wget https://github.com/broadinstitute/gatk/releases/download/4.0.9.0/gatk-4.0.9.0.zip
 unzip gatk-4.0.9.0.zip
-cd gatk-4.0.9.0
 # 2B. Add the path to the .bashrc file 
-echo "export PATH=$PATH:$(pwd)/gatk-4.0.9.0/gatk" >> $HOME/.bashrc
+echo "export PATH=\$PATH:$(pwd)/gatk-4.0.9.0/gatk" >> $HOME/.bashrc
 source $HOME/.bashrc
 # 2B. run the conda env (I have installed miniconda already & I have miniconda3/bin in the PATH)
 # https://software.broadinstitute.org/gatk/documentation/article?id=12836
 conda update conda  ## conda --version ## conda 4.5.11
+cd gatk-4.0.9.0
 conda env create -n gatk -f gatkcondaenv.yml
 
 ###############
